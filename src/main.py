@@ -10,8 +10,7 @@ from configs import configure_argument_parser, configure_logging
 from constants import (BASE_DIR, DOWNLOADS_DIR, EXPECTED_STATUS, FINISH_TEXT,
                        MAIN_DOC_URL, MISMATCHED_STATUS_TEXT, NOT_FOUND_TEXT,
                        PEP_BASE_URL, STARTUP_TEXT)
-from exceptions import ParserFindTagException
-from outputs import control_output, file_output
+from outputs import control_output
 from utils import find_tag, get_dir_path, get_soup
 
 ARCHIVE_SAVED_PHRASE = 'Архив был загружен и сохранён: {archive_path}'
@@ -23,16 +22,15 @@ ARGS_PHRASE = 'Аргументы командной строки: {args}'
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
-    version_a_tags = get_soup(
-        session,
-        whats_new_url
-    ).select(
-        '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 a'
+
+    soup = get_soup(session, whats_new_url)
+
+    a_tags = soup.select(
+        '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a'
     )
-    if not version_a_tags:
-        return
+
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
-    for a_tag in tqdm(version_a_tags):
+    for a_tag in tqdm(a_tags):
         version_link = urljoin(whats_new_url, a_tag['href'])
         soup = get_soup(session, version_link)
         if soup:
