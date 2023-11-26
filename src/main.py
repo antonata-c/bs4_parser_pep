@@ -7,13 +7,12 @@ import requests_cache
 from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
-from constants import (BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL,
-                       PEP_BASE_URL, DOWNLOADS_DIR,
-                       STARTUP_TEXT, FINISH_TEXT,
-                       MISMATCHED_STATUS_TEXT, NOT_FOUND_TEXT)
-from outputs import control_output, file_output
+from constants import (BASE_DIR, DOWNLOADS_DIR, EXPECTED_STATUS, FINISH_TEXT,
+                       MAIN_DOC_URL, MISMATCHED_STATUS_TEXT, NOT_FOUND_TEXT,
+                       PEP_BASE_URL, STARTUP_TEXT)
 from exceptions import ParserFindTagException
-from utils import find_tag, get_soup, get_dir_path
+from outputs import control_output, file_output
+from utils import find_tag, get_dir_path, get_soup
 
 ARCHIVE_SAVED_PHRASE = 'Архив был загружен и сохранён: {archive_path}'
 STATUS_ERROR_PHRASE = ('\nСтраница: {0}'
@@ -75,8 +74,8 @@ def download(session):
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
     soup = get_soup(session, downloads_url)
 
-    pdf_a4_link = soup.select_one(f'table.docutils'
-                                  f' a[href$="pdf-a4.zip"]')['href']
+    pdf_a4_link = soup.select_one('table.docutils'
+                                  ' a[href$="pdf-a4.zip"]')['href']
 
     archive_url = urljoin(downloads_url, pdf_a4_link)
     filename = archive_url.split('/')[-1]

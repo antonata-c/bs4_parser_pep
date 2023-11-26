@@ -4,8 +4,8 @@ from datetime import datetime
 
 from prettytable import PrettyTable
 
-from constants import (BASE_DIR, DATETIME_FORMAT,
-                       RESULTS_DIR, PRETTY_CASE, FILE_CASE)
+from constants import (BASE_DIR, DATETIME_FORMAT, FILE_CASE, PRETTY_CASE,
+                       RESULTS_DIR)
 from utils import get_dir_path
 
 FILE_SAVED_PHRASE = 'Файл с результатами был сохранён: {file_path}'
