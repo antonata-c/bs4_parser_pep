@@ -9,7 +9,7 @@ DT_FORMAT = '%d.%m.%Y %H:%M:%S'
 
 
 def configure_argument_parser(available_modes):
-    parser = argparse.ArgumentParser(description='Парсер документации Python')
+    parser = argparse.ArgumentParser(description='Парсер Python документации')
     parser.add_argument(
         'mode',
         choices=available_modes,

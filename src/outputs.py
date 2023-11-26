@@ -19,8 +19,7 @@ def file_output(results, cli_args):
     file_name = f'{parser_mode}_{now_formatted}.csv'
     file_path = results_dir / file_name
     with open(file_path, 'w', encoding='utf-8') as f:
-        writer = csv.writer(f, dialect=csv.unix_dialect)
-        writer.writerows(results)
+        csv.writer(f, dialect=csv.unix_dialect).writerows(results)
 
     logging.info(FILE_SAVED_PHRASE.format(file_path=file_path))
 
