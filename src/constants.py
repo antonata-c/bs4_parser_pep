@@ -11,7 +11,7 @@ RESULTS_DIR = 'results'
 
 STARTUP_TEXT = 'Парсер запущен!'
 FINISH_TEXT = 'Парсер завершил работу.'
-MISMATCHED_STATUS_TEXT = 'Несовпадающие статусы:'
+MISMATCHED_STATUS_TEXT = 'Ошибка в статусах:'
 NOT_FOUND_TEXT = 'Ничего не нашлось'
 
 PRETTY_CASE = 'pretty'

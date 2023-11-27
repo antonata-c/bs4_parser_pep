@@ -97,8 +97,7 @@ def pep(session):
     soup = get_soup(session, PEP_BASE_URL)
     table_tags = soup.select('#index-by-category table.pep-zero-table')
     results = defaultdict(lambda: 0)
-    error_statuses = [MISMATCHED_STATUS_TEXT]
-    error_connections = []
+    errors = [MISMATCHED_STATUS_TEXT]
     for table in tqdm(table_tags):
         tr_tags = table.tbody.find_all('tr')
         for tr in tr_tags:
@@ -106,7 +105,7 @@ def pep(session):
             try:
                 page_soup = get_soup(session, page_link)
             except ConnectionError as error:
-                error_connections.append(SOUP_ERROR.format(
+                errors.append(SOUP_ERROR.format(
                     error=error, link=page_link
                 ))
                 continue
@@ -119,7 +118,7 @@ def pep(session):
 
             preview_status = tr.abbr.text[1:]
             if actual_status not in EXPECTED_STATUS[preview_status]:
-                error_statuses.append(
+                errors.append(
                     STATUS_ERROR.format(
                         page_link,
                         actual_status,
@@ -127,8 +126,7 @@ def pep(session):
                     )
                 )
             results[actual_status] += 1
-    list(map(logging.error, error_connections))
-    list(map(logging.error, error_statuses))
+    list(map(logging.error, errors))
     return [
         ('Статус', 'Количество'),
         *results.items(),
