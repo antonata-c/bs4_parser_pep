@@ -24,8 +24,11 @@ SOUP_ERROR = 'Ошибка: {error} URL: {link}'
 
 def whats_new(session):
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
+    errors = []
     for a_tag in tqdm(
-            get_soup(session, urljoin(MAIN_DOC_URL, 'whatsnew/')).select(
+            get_soup(
+                session, urljoin(MAIN_DOC_URL, 'whatsnew/')
+            ).select(
                 '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a'
             )):
         version_link = urljoin(
@@ -34,15 +37,17 @@ def whats_new(session):
         )
         try:
             soup = get_soup(session, version_link)
-        except Exception as error:
-            raise SoupError(SOUP_ERROR.format(
+        except ConnectionError as error:
+            errors.append(SOUP_ERROR.format(
                 error=error, link=version_link
             ))
+            continue
         results.append(
             (version_link,
              find_tag(soup, 'h1').text,
              find_tag(soup, 'dl').text.replace('\n', ' '))
         )
+    list(map(logging.error, errors))
     return results
 
 
@@ -93,16 +98,18 @@ def pep(session):
     table_tags = soup.select('#index-by-category table.pep-zero-table')
     results = defaultdict(lambda: 0)
     error_statuses = [MISMATCHED_STATUS_TEXT]
+    error_connections = []
     for table in tqdm(table_tags):
         tr_tags = table.tbody.find_all('tr')
         for tr in tr_tags:
             page_link = urljoin(PEP_BASE_URL, tr.a['href'])
             try:
                 page_soup = get_soup(session, page_link)
-            except Exception as error:
-                raise SoupError(SOUP_ERROR.format(
+            except ConnectionError as error:
+                error_connections.append(SOUP_ERROR.format(
                     error=error, link=page_link
                 ))
+                continue
             page_section_tag = find_tag(page_soup,
                                         'section',
                                         {'id': 'pep-content'})
@@ -120,8 +127,8 @@ def pep(session):
                     )
                 )
             results[actual_status] += 1
-    if error_statuses:
-        list(map(logging.error, error_statuses))
+    list(map(logging.error, error_connections))
+    list(map(logging.error, error_statuses))
     return [
         ('Статус', 'Количество'),
         *results.items(),
