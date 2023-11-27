@@ -11,7 +11,7 @@ from constants import (BASE_DIR, DOWNLOADS_DIR, EXPECTED_STATUS, FINISH_TEXT,
                        MAIN_DOC_URL, MISMATCHED_STATUS_TEXT, NOT_FOUND_TEXT,
                        PEP_BASE_URL, STARTUP_TEXT)
 from outputs import control_output
-from exceptions import SoupError, TextNotFound
+from exceptions import TextNotFound
 from utils import find_tag, get_dir_path, get_soup
 
 ARCHIVE_SAVED = 'Архив был загружен и сохранён: {archive_path}'

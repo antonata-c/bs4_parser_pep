@@ -3,11 +3,6 @@ class ParserFindTagException(Exception):
     pass
 
 
-class SoupError(Exception):
-    """Вызывается, когда суп безуспешно создается."""
-    pass
-
-
 class TextNotFound(Exception):
     """Вызывается, когда подстрока не была найдена в строке."""
     pass
