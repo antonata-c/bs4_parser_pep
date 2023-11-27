@@ -11,34 +11,38 @@ from constants import (BASE_DIR, DOWNLOADS_DIR, EXPECTED_STATUS, FINISH_TEXT,
                        MAIN_DOC_URL, MISMATCHED_STATUS_TEXT, NOT_FOUND_TEXT,
                        PEP_BASE_URL, STARTUP_TEXT)
 from outputs import control_output
+from exceptions import SoupError, TextNotFound
 from utils import find_tag, get_dir_path, get_soup
 
-ARCHIVE_SAVED_PHRASE = 'Архив был загружен и сохранён: {archive_path}'
-STATUS_ERROR_PHRASE = ('Страница: {0}'
-                       ' Статус в карточке: {1}'
-                       ' Ожидаемые статусы: {2}')
-ARGS_PHRASE = 'Аргументы командной строки: {args}'
+ARCHIVE_SAVED = 'Архив был загружен и сохранён: {archive_path}'
+STATUS_ERROR = ('Страница: {0}'
+                ' Статус в карточке: {1}'
+                ' Ожидаемые статусы: {2}')
+ARGS = 'Аргументы командной строки: {args}'
+SOUP_ERROR = 'Ошибка: {error} URL: {link}'
 
 
 def whats_new(session):
-    whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
-
-    soup = get_soup(session, whats_new_url)
-
-    a_tags = soup.select(
-        '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a'
-    )
-
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
-    for a_tag in tqdm(a_tags):
-        version_link = urljoin(whats_new_url, a_tag['href'])
-        soup = get_soup(session, version_link)
-        if soup:
-            results.append(
-                (version_link,
-                 find_tag(soup, 'h1').text,
-                 find_tag(soup, 'dl').text.replace('\n', ' '))
-            )
+    for a_tag in tqdm(
+            get_soup(session, urljoin(MAIN_DOC_URL, 'whatsnew/')).select(
+                '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a'
+            )):
+        version_link = urljoin(
+            urljoin(MAIN_DOC_URL, 'whatsnew/'),
+            a_tag['href']
+        )
+        try:
+            soup = get_soup(session, version_link)
+        except Exception as error:
+            raise SoupError(SOUP_ERROR.format(
+                error=error, link=version_link
+            ))
+        results.append(
+            (version_link,
+             find_tag(soup, 'h1').text,
+             find_tag(soup, 'dl').text.replace('\n', ' '))
+        )
     return results
 
 
@@ -52,7 +56,7 @@ def latest_versions(session):
             a_tags = ul.find_all('a')
             break
     else:
-        raise LookupError(NOT_FOUND_TEXT)
+        raise TextNotFound(NOT_FOUND_TEXT)
     results = [('Ссылка на документацию', 'Версия', 'Статус')]
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
     for a_tag in a_tags:
@@ -69,41 +73,36 @@ def latest_versions(session):
 
 def download(session):
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
-
     pdf_a4_link = get_soup(session, downloads_url).select_one(
         'table.docutils'
         ' a[href$="pdf-a4.zip"]'
     )['href']
-
     archive_url = urljoin(downloads_url, pdf_a4_link)
     filename = archive_url.split('/')[-1]
-
     downloads_dir = get_dir_path(BASE_DIR, DOWNLOADS_DIR)
     downloads_dir.mkdir(exist_ok=True)
-
     response = session.get(archive_url)
     archive_path = downloads_dir / filename
-
     with open(archive_path, 'wb') as file:
         file.write(response.content)
-
-    logging.info(ARCHIVE_SAVED_PHRASE.format(archive_path=archive_path))
+    logging.info(ARCHIVE_SAVED.format(archive_path=archive_path))
 
 
 def pep(session):
     soup = get_soup(session, PEP_BASE_URL)
-    if not soup:
-        return
     table_tags = soup.select('#index-by-category table.pep-zero-table')
     results = defaultdict(lambda: 0)
-    error_statuses = []
+    error_statuses = [MISMATCHED_STATUS_TEXT]
     for table in tqdm(table_tags):
         tr_tags = table.tbody.find_all('tr')
         for tr in tr_tags:
             page_link = urljoin(PEP_BASE_URL, tr.a['href'])
-            page_soup = get_soup(session, page_link)
-            if not page_soup:
-                continue
+            try:
+                page_soup = get_soup(session, page_link)
+            except Exception as error:
+                raise SoupError(SOUP_ERROR.format(
+                    error=error, link=page_link
+                ))
             page_section_tag = find_tag(page_soup,
                                         'section',
                                         {'id': 'pep-content'})
@@ -114,15 +113,15 @@ def pep(session):
             preview_status = tr.abbr.text[1:]
             if actual_status not in EXPECTED_STATUS[preview_status]:
                 error_statuses.append(
-                    (page_link, actual_status, EXPECTED_STATUS[preview_status])
+                    STATUS_ERROR.format(
+                        page_link,
+                        actual_status,
+                        EXPECTED_STATUS[preview_status]
+                    )
                 )
             results[actual_status] += 1
     if error_statuses:
-        logging.error(
-            MISMATCHED_STATUS_TEXT + '\n' +
-            '\n'.join(map(lambda x: STATUS_ERROR_PHRASE.format(*x),
-                          error_statuses))
-        )
+        list(map(logging.error, error_statuses))
     return [
         ('Статус', 'Количество'),
         *results.items(),
@@ -144,7 +143,7 @@ def main():
     arg_parser = configure_argument_parser(MODE_TO_FUNCTION.keys())
     args = arg_parser.parse_args()
     logging.info(STARTUP_TEXT)
-    logging.info(ARGS_PHRASE.format(args=args))
+    logging.info(ARGS.format(args=args))
 
     try:
         session = requests_cache.CachedSession()
